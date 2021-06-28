@@ -38,7 +38,7 @@ app.post("/sign-in", async (req, res) => {
     const user = result.rows[0];
 
     if (!user || (await bcrypt.compare(password, user.password))) {
-      console.log(user, user.password, password);
+      console.log(user.password, password, bcrypt.hashSync(password, 10));
       throw new Error("Unauthorized");
     }
 
@@ -56,6 +56,7 @@ app.post("/sign-in", async (req, res) => {
       .send({ username: user.username, email: user.email, token: token });
   } catch (err) {
     if (err.message === "Unauthorized") return res.sendStatus(401);
+    console.log(err.message);
     return res.sendStatus(400);
   }
 });
@@ -64,7 +65,9 @@ app.post("/sign-up", async (req, res) => {
   try {
     const { username, password, email } = req.body;
 
+    console.log(password, "pass", password === "pass", password == "pass");
     const passwordHash = await bcrypt.hash(password, 10);
+    console.log(await bcrypt.compare(password, passwordHash));
 
     await userSignUpSchema.validateAsync({
       username,
@@ -77,6 +80,7 @@ app.post("/sign-up", async (req, res) => {
       [username, passwordHash, email]
     );
 
+    console.log(username, password, passwordHash, email);
     res.sendStatus(201);
   } catch (err) {
     if (
@@ -126,9 +130,25 @@ app.get("/registers", async (req, res) => {
   }
 });
 
-app.post("/add-revenue", async (req, res) => {
+app.post(
+  "/add-revenue",
+  async (req, res) => await addEntry(req, res, "revenue")
+);
+
+app.post(
+  "/add-expense",
+  async (req, res) => await addEntry(req, res, "expense")
+);
+
+app.listen(4000, () => {
+  console.log("Listening on port 4000");
+});
+
+async function addEntry(req, res, type) {
   try {
-    const { value, description } = req.body;
+    let { value, description } = req.body;
+    value = type === "revenue" ? value : -value;
+
     const authorization = req.headers["authorization"];
     const token = authorization?.replace("Bearer ", "");
 
@@ -155,13 +175,9 @@ app.post("/add-revenue", async (req, res) => {
       'null value in column "userId" violates not-null constraint'
     )
       res.sendStatus(404);
-    console.log(err.message);
     res.sendStatus(400);
   }
-});
+}
 
-app.listen(4000, () => {
-  console.log("Listening on port 4000");
-});
-
-console.log(new Date().toLocaleDateString("pt-br").slice(0, 5));
+const ph = await bcrypt.hash("pass", 10);
+console.log(ph);
