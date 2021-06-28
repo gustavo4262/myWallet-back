@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import pg from "pg";
 import bcrypt from "bcrypt";
-import { userSignInSchema, userSignUpSchema } from "./schemas.js";
 import { v4 } from "uuid";
+import { userSignInSchema, userSignUpSchema } from "./schemas.js";
 
 const { Pool } = pg;
 
@@ -47,10 +47,11 @@ app.post("/sign-in", async (req, res) => {
       [token, email]
     );
 
-    res.status(200).send(token);
+    res
+      .status(200)
+      .send({ username: user.username, email: user.email, token: token });
   } catch (err) {
     if (err.message === "Unauthorized") return res.sendStatus(401);
-    console.log(err.message);
     return res.sendStatus(400);
   }
 });
@@ -84,8 +85,45 @@ app.post("/sign-up", async (req, res) => {
   }
 });
 
+
+app.get("/registers", async (req, res) => {
+  try {
+    const authorization = req.headers["authorization"];
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) throw new Error("Unauthorized");
+
+    const registers = await connection.query(
+      `SELECT r.*
+       FROM registers AS r
+       JOIN users AS u
+       ON r."userId" = u.id
+       WHERE token = $1`,
+      [token]
+    );
+
+    if (!registers.rowCount) throw new Error("Unauthorized");
+
+    const balancePrice = await connection.query(
+      `SELECT r."userId", SUM(price) as price
+      FROM registers AS r
+      JOIN users AS u
+      ON r."userId" = u.id
+      WHERE token = $1
+      GROUP BY "userId"`,
+      [token]
+    );
+
+    res
+      .status(200)
+      .send({ registers: registers.rows, balancePrice: balancePrice.rows[0] });
+  } catch (err) {
+    console.log(err.message);
+    if (err.message === "Unauthorized") return res.sendStatus(401);
+    res.sendStatus(400);
+  }
+});
+
 app.listen(4000, () => {
   console.log("Listening on port 4000");
 });
-
-console.log(v4());
