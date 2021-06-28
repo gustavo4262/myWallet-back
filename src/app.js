@@ -3,7 +3,11 @@ import cors from "cors";
 import pg from "pg";
 import bcrypt from "bcrypt";
 import { v4 } from "uuid";
-import { userSignInSchema, userSignUpSchema } from "./schemas.js";
+import {
+  userSignInSchema,
+  userSignUpSchema,
+  revenueSchema,
+} from "./schemas.js";
 
 const { Pool } = pg;
 
@@ -85,7 +89,6 @@ app.post("/sign-up", async (req, res) => {
   }
 });
 
-
 app.get("/registers", async (req, res) => {
   try {
     const authorization = req.headers["authorization"];
@@ -118,8 +121,41 @@ app.get("/registers", async (req, res) => {
       .status(200)
       .send({ registers: registers.rows, balancePrice: balancePrice.rows[0] });
   } catch (err) {
-    console.log(err.message);
     if (err.message === "Unauthorized") return res.sendStatus(401);
+    res.sendStatus(400);
+  }
+});
+
+app.post("/add-revenue", async (req, res) => {
+  try {
+    const { value, description } = req.body;
+    const authorization = req.headers["authorization"];
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) throw new Error("Unauthorized");
+
+    await revenueSchema.validateAsync({ value, description });
+
+    const date = new Date().toLocaleDateString("pt-br").slice(0, 5);
+
+    await connection.query(
+      `INSERT INTO registers
+       ("userId", date, name, price)
+       VALUES
+       ( (SELECT id FROM users WHERE token = $1),
+        $2, $3, $4 )`,
+      [token, date, description, value]
+    );
+
+    res.sendStatus(201);
+  } catch (err) {
+    if (err.message === "Unauthorized") res.sendStatus(401);
+    if (
+      err.message ===
+      'null value in column "userId" violates not-null constraint'
+    )
+      res.sendStatus(404);
+    console.log(err.message);
     res.sendStatus(400);
   }
 });
@@ -127,3 +163,5 @@ app.get("/registers", async (req, res) => {
 app.listen(4000, () => {
   console.log("Listening on port 4000");
 });
+
+console.log(new Date().toLocaleDateString("pt-br").slice(0, 5));

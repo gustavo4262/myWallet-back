@@ -10,3 +10,8 @@ export const userSignInSchema = Joi.object({
   email: Joi.string().required(),
   password: Joi.string().required(),
 });
+
+export const revenueSchema = Joi.object({
+  value: Joi.number().required(),
+  description: Joi.string().required(),
+});
