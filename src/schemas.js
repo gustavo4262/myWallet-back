@@ -11,7 +11,7 @@ export const userSignInSchema = Joi.object({
   password: Joi.string().required(),
 });
 
-export const revenueSchema = Joi.object({
+export const entrySchema = Joi.object({
   value: Joi.number().required(),
   description: Joi.string().required(),
 });
