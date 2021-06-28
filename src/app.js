@@ -1,19 +1,9 @@
 import express from "express";
 import cors from "cors";
-import pg from "pg";
 import bcrypt from "bcrypt";
 import { v4 } from "uuid";
 import { userSignInSchema, userSignUpSchema, entrySchema } from "./schemas.js";
-
-const { Pool } = pg;
-
-const connection = new Pool({
-  user: "postgres",
-  password: "123456",
-  host: "127.0.0.1",
-  port: 5432,
-  database: "myWallet",
-});
+import connection from "./database.js";
 
 const app = express();
 app.use(express.json());
@@ -166,6 +156,4 @@ async function addEntry(req, res, type) {
   }
 }
 
-app.listen(4000, () => {
-  console.log("Listening on port 4000");
-});
+export default app;
